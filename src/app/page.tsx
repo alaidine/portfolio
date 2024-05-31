@@ -1,113 +1,138 @@
+"use client";
+
+import { TypewriterEffectSmooth } from "@/components/ui/typewriter-effect";
+import React from "react";
 import Image from "next/image";
+import { TracingBeam } from "@/components/ui/tracing-beam";
+
+function Greeting() {
+  return (
+    <div className="flex flex-col items-center justify-center">
+      <TypewriterEffectSmooth
+        words={[
+          {
+            text: "Welcome to my Portfolio",
+            className: "text-4xl font-bold text-white",
+          },
+        ]}
+      />
+    </div>
+  );
+}
+
+function TracingBeamDemo() {
+  return (
+    <TracingBeam className="px-6">
+      <Greeting />
+
+      <div className="max-w-2xl mx-auto antialiased pt-4 relative">
+        {dummyContent.map((item, index) => (
+          <div key={`content-${index}`} className="mb-10">
+            <h2 className="bg-black text-white rounded-full text-sm w-fit px-4 py-1 mb-4">
+              {item.badge}
+            </h2>
+
+            <p>
+              {item.title}
+            </p>
+
+            <div className="text-sm  prose prose-sm dark:prose-invert">
+              {item?.image && (
+                <Image
+                  src={item.image}
+                  alt="blog thumbnail"
+                  height="1000"
+                  width="1000"
+                  className="rounded-lg mb-10 object-cover"
+                />
+              )}
+              {item.description}
+            </div>
+          </div>
+        ))}
+      </div>
+    </TracingBeam>
+  );
+}
+
+const dummyContent = [
+  {
+    title: "Lorem Ipsum Dolor Sit Amet",
+    description: (
+      <>
+        <p>
+          Sit duis est minim proident non nisi velit non consectetur. Esse
+          adipisicing laboris consectetur enim ipsum reprehenderit eu deserunt
+          Lorem ut aliqua anim do. Duis cupidatat qui irure cupidatat incididunt
+          incididunt enim magna id est qui sunt fugiat. Laboris do duis pariatur
+          fugiat Lorem aute sit ullamco. Qui deserunt non reprehenderit dolore
+          nisi velit exercitation Lorem qui do enim culpa. Aliqua eiusmod in
+          occaecat reprehenderit laborum nostrud fugiat voluptate do Lorem culpa
+          officia sint labore. Tempor consectetur excepteur ut fugiat veniam
+          commodo et labore dolore commodo pariatur.
+        </p>
+        <p>
+          Dolor minim irure ut Lorem proident. Ipsum do pariatur est ad ad
+          veniam in commodo id reprehenderit adipisicing. Proident duis
+          exercitation ad quis ex cupidatat cupidatat occaecat adipisicing.
+        </p>
+        <p>
+          Tempor quis dolor veniam quis dolor. Sit reprehenderit eiusmod
+          reprehenderit deserunt amet laborum consequat adipisicing officia qui
+          irure id sint adipisicing. Adipisicing fugiat aliqua nulla nostrud.
+          Amet culpa officia aliquip deserunt veniam deserunt officia
+          adipisicing aliquip proident officia sunt.
+        </p>
+      </>
+    ),
+    badge: "React",
+    image:
+      "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=3540&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+  },
+  {
+    title: "Lorem Ipsum Dolor Sit Amet",
+    description: (
+      <>
+        <p>
+          Ex irure dolore veniam ex velit non aute nisi labore ipsum occaecat
+          deserunt cupidatat aute. Enim cillum dolor et nulla sunt exercitation
+          non voluptate qui aliquip esse tempor. Ullamco ut sunt consectetur
+          sint qui qui do do qui do. Labore laborum culpa magna reprehenderit ea
+          velit id esse adipisicing deserunt amet dolore. Ipsum occaecat veniam
+          commodo proident aliqua id ad deserunt dolor aliquip duis veniam sunt.
+        </p>
+        <p>
+          In dolore veniam excepteur eu est et sunt velit. Ipsum sint esse
+          veniam fugiat esse qui sint ad sunt reprehenderit do qui proident
+          reprehenderit. Laborum exercitation aliqua reprehenderit ea sint
+          cillum ut mollit.
+        </p>
+      </>
+    ),
+    badge: "Changelog",
+    image:
+      "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&q=80&w=3540&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+  },
+  {
+    title: "Lorem Ipsum Dolor Sit Amet",
+    description: (
+      <>
+        <p className="mb-80">
+          Ex irure dolore veniam ex velit non aute nisi labore ipsum occaecat
+          deserunt cupidatat aute. Enim cillum dolor et nulla sunt exercitation
+          non voluptate qui aliquip esse tempor. Ullamco ut sunt consectetur
+          sint qui qui do do qui do. Labore laborum culpa magna reprehenderit ea
+          velit id esse adipisicing deserunt amet dolore. Ipsum occaecat veniam
+          commodo proident aliqua id ad deserunt dolor aliquip duis veniam sunt.
+        </p>
+      </>
+    ),
+    badge: "Launch Week",
+    image:
+      "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&q=80&w=3506&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+  },
+];
 
 export default function Home() {
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:size-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
-
-      <div className="relative z-[-1] flex place-items-center before:absolute before:h-[300px] before:w-full before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 sm:before:w-[480px] sm:after:w-[240px] before:lg:h-[360px]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:mb-0 lg:w-full lg:max-w-5xl lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Explore starter templates for Next.js.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-balance text-sm opacity-50">
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  );
+  return <TracingBeamDemo />
 }

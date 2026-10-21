@@ -1,5 +1,5 @@
 import { Application, Container, Graphics, Text, TextureStyle } from 'https://cdn.jsdelivr.net/npm/pixi.js@8.22.0/dist/pixi.min.mjs';
-import { BOY_HEAD, BOY_BODY, BOY_LEGS, BOY_COLORS, OUTLINE, drawSprite } from './sprites.js';
+import { AFRO, FACE, SHADES, BODY, LEGS, BOY_BODY, BOY_LEGS, BOY_COLORS, OUTLINE, compose, drawSprite } from './sprites.js';
 
 const T = 8; // tile size
 const BPM = 100;
@@ -32,6 +32,7 @@ const SUPER_H = 3.4; // jumping out of a dash along the ground
 const COYOTE = 6;
 const BUFFER = 5;
 const CORNER = 4; // pixels of corner correction
+const DANCE_AFTER = 90; // steps standing still on the dance floor before dancing
 
 // Party-goers, same style as the player: h = hair, s = skin, j = top, p = trousers, o = shoes
 const HEADS = {
@@ -57,6 +58,7 @@ const NOTE = [
 const party = (i) => PARTY[((Math.floor(i) % PARTY.length) + PARTY.length) % PARTY.length];
 const approach = (v, target, step) => (v < target ? Math.min(v + step, target) : Math.max(v - step, target));
 const tinted = (colors, c) => Object.fromEntries(Object.keys(colors).map((k) => [k, c]));
+const css = (c) => `#${c.toString(16).padStart(6, '0')}`;
 
 function lerpColor(a, b, t) {
     const ch = (s) => Math.round(((a >> s) & 255) + (((b >> s) & 255) - ((a >> s) & 255)) * t);
@@ -72,66 +74,85 @@ function rng(seed) {
     };
 }
 
-// Level: 0 = empty, 1 = solid, 2 = jump-through ledge
+function hashString(s) {
+    let h = 2166136261;
+    for (const ch of s) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+    return h >>> 0;
+}
 
-const COLS = 100;
-const ROWS = 23;
-const LEVEL_W = COLS * T;
-const LEVEL_H = ROWS * T;
-const grid = Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
-const solid = (x, y, w, h) => {
-    for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) grid[j][i] = 1;
-};
-const ledge = (x, y, w) => {
-    for (let i = x; i < x + w; i++) grid[y][i] = 2;
-};
-
-// outer shell
-solid(0, 0, COLS, 1);
-solid(0, 0, 2, ROWS);
-solid(COLS - 2, 0, 2, ROWS);
-// entrance
-solid(0, 20, 35, 3);
-solid(23, 17, 12, 3);
-// shallow pit
-solid(35, 22, 5, 1);
-// dance hall
-solid(40, 20, 32, 3);
-solid(43, 1, 3, 1);
-solid(66, 1, 5, 1);
-ledge(46, 17, 6);
-ledge(55, 14, 8);
-ledge(49, 11, 5);
-// climb to the VIP balcony
-solid(72, 20, 26, 3);
-solid(72, 18, 3, 2);
-solid(76, 15, 3, 5);
-solid(80, 12, 3, 8);
-ledge(84, 9, 3);
-solid(87, 6, 11, 14);
-
-const tileAt = (tx, ty) => (tx < 0 || tx >= COLS || ty < 0 || ty >= ROWS ? 1 : grid[ty][tx]);
-
-const SIGNS = [
-    { page: 0, x: 29 * T + 4, y: 17 * T },
-    { page: 1, x: 59 * T + 4, y: 14 * T },
-    { page: 2, x: 92 * T, y: 6 * T },
-];
-const LANTERNS = [[5, 5], [32, 6], [37, 4], [75, 4], [81, 3]].map(([x, y], i) => ({ x: x * T, y: y * T, c: party(i * 2) }));
-const BALL = { x: 56 * T, y: 30 };
-const BOOTH = { x: 520, y: 146 };
-const SPEAKERS = [500, 560];
-
-// pages: [{ title, body }] in sign order. mount: element the canvas goes into.
-export async function startGame({ pages, mount }) {
+// pages: { about: { title, el }, contact: { title, el }, projects: [{ title, el }] }
+// mount: element the canvas goes into. dialogEl: the HTML reading dialog. touch: on-screen controls in use.
+export async function startGame({ pages, mount, dialogEl, touch = false }) {
     let W = 320;
     let H = 180;
+    const projects = pages.projects;
+
+    // Level: 0 = empty, 1 = solid, 2 = jump-through ledge.
+    // Entrance, dance hall, a projects gallery sized to fit every project, then the climb to the balcony.
+    const GX = 72;
+    const GW = Math.max(20, projects.length * 9 + 8);
+    const CX = GX + GW;
+    const COLS = CX + 28;
+    const ROWS = 23;
+    const LEVEL_W = COLS * T;
+    const LEVEL_H = ROWS * T;
+    const grid = Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
+    const solid = (x, y, w, h) => {
+        for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) grid[j][i] = 1;
+    };
+    const ledge = (x, y, w) => {
+        for (let i = x; i < x + w; i++) grid[y][i] = 2;
+    };
+    const tileAt = (tx, ty) => (tx < 0 || tx >= COLS || ty < 0 || ty >= ROWS ? 1 : grid[ty][tx]);
+
+    // outer shell
+    solid(0, 0, COLS, 1);
+    solid(0, 0, 2, ROWS);
+    solid(COLS - 2, 0, 2, ROWS);
+    // entrance
+    solid(0, 20, 35, 3);
+    solid(23, 17, 12, 3);
+    // shallow pit
+    solid(35, 22, 5, 1);
+    // dance hall
+    solid(40, 20, 32, 3);
+    solid(43, 1, 3, 1);
+    solid(66, 1, 5, 1);
+    ledge(46, 17, 6);
+    ledge(55, 14, 8);
+    ledge(49, 11, 5);
+    // gallery
+    solid(GX, 20, GW, 3);
+    solid(GX, 1, GW, 1);
+    // climb to the VIP balcony
+    solid(CX, 20, 26, 3);
+    solid(CX, 18, 3, 2);
+    solid(CX + 4, 15, 3, 5);
+    solid(CX + 8, 12, 3, 8);
+    ledge(CX + 12, 9, 3);
+    solid(CX + 15, 6, 11, 14);
+
+    const inHall = (x) => x > 40 * T && x < 72 * T;
+    const LANTERNS = [[5, 5], [32, 6], [37, 4], [CX + 3, 4], [CX + 9, 3]].map(([x, y], i) => ({ x: x * T, y: y * T, c: party(i * 2) }));
+    const NOTES = [[25, 12], [50, 9], [48, 13], [CX + 6, 12], [CX + 13, 6]].map(([x, y]) => ({ x: x * T + 4, y: y * T + 4, got: false }));
+    const BALL = { x: 56 * T, y: 30 };
+    const BOOTH = { x: 520, y: 146 };
+    const SPEAKERS = [500, 560];
+
+    // Things you can read: signs for About and Contact, a poster per project
+    const readables = [
+        { kind: 'page', key: 'about', x: 29 * T + 4, y: 17 * T, c: PARTY[0] },
+        { kind: 'page', key: 'contact', x: (CX + 20) * T, y: 6 * T, c: PARTY[4] },
+        ...projects.map((p, i) => ({ kind: 'project', i, x: (GX + 6 + i * 9) * T + 4, y: 20 * T, top: 98, c: party(i * 2 + 1) })),
+    ];
+
+    // App setup
 
     TextureStyle.defaultOptions.scaleMode = 'nearest';
     const app = new Application();
     await app.init({ width: W, height: H, background: 0x07040f, antialias: false, resolution: 1, roundPixels: true });
     await Promise.all([document.fonts.load(`8px ${UI_FONT}`), document.fonts.load(`24px ${TITLE_FONT}`)]);
-    app.canvas.setAttribute('aria-label', 'Portfolio game: walk to the signs to read About, Projects and Contact');
+    app.canvas.setAttribute('aria-label', 'Portfolio game: walk to the signs and posters to read About, Projects and Contact');
     mount.replaceChildren(app.canvas);
 
     const label = (text, fill = 0xffffff, style = {}) =>
@@ -146,8 +167,7 @@ export async function startGame({ pages, mount }) {
     const mid = new Graphics();
     const world = new Container();
     const hud = new Container();
-    const dialog = new Container();
-    app.stage.addChild(sky, far, mid, world, hud, dialog);
+    app.stage.addChild(sky, far, mid, world, hud);
 
     const backdrop = new Graphics();
     const glowBack = new Graphics();
@@ -226,6 +246,27 @@ export async function startGame({ pages, mount }) {
             backdrop.rect(x, y, 8, 1).fill(0x3a2d5c);
             backdrop.poly([x + 1, y + 1, x + 7, y + 1, x + 4, y + 6]).fill({ color: party(k), alpha: 0.8 });
         }
+
+        // gallery wall with a picture rail and one framed poster per project
+        backdrop.rect(GX * T, 2 * T, GW * T, 18 * T).fill(0x0e0b1c);
+        backdrop.rect(GX * T, 88, GW * T, 1).fill(0x2a2148);
+        backdrop.rect(GX * T, 136, GW * T, 1).fill(0x1d1736);
+        for (const r of readables) {
+            if (r.kind !== 'project') continue;
+            const pick = rng(hashString(projects[r.i].title));
+            const fx0 = r.x - 14, fy0 = r.top;
+            backdrop.rect(r.x, 88, 1, fy0 - 88).fill(0x2a2148);
+            backdrop.rect(fx0, fy0, 28, 20).fill(0x2a1f45);
+            backdrop.rect(fx0, fy0, 28, 20).stroke({ width: 1, color: r.c, alignment: 1 });
+            // generated abstract art, different for every project title
+            for (let gy = 0; gy < 4; gy++) {
+                for (let gx = 0; gx < 6; gx++) {
+                    const v = pick();
+                    const color = v < 0.35 ? 0x140c26 : party(Math.floor(v * 60));
+                    backdrop.rect(fx0 + 2 + gx * 4, fy0 + 2 + gy * 4, 4, 4).fill(color);
+                }
+            }
+        }
     }
 
     function drawTiles() {
@@ -248,8 +289,8 @@ export async function startGame({ pages, mount }) {
                     if (tileAt(tx, ty - 1) !== 1) {
                         tiles.rect(px, py, T, 2).fill(0x3d3066);
                         tiles.rect(px, py, T, 1).fill(0x5b4b8a);
-                        // glowing party mushrooms
-                        if (r > 0.75 && ty > 1) {
+                        // glowing party mushrooms, kept off the dance floor and gallery
+                        if (r > 0.75 && ty > 1 && !(ty === 20 && tx >= 40 && tx < CX)) {
                             tiles.rect(px + 3, py - 2, 1, 2).fill(0x8a7bb5);
                             tiles.rect(px + 2, py - 3, 3, 1).fill(party(tx));
                         }
@@ -285,44 +326,59 @@ export async function startGame({ pages, mount }) {
         const sub = label('ALI MLINDE', 0xd8cfff);
         sub.anchor.set(0.5, 0);
         sub.position.set(150, 56);
-        const help1 = label('ARROWS MOVE, Z JUMP x2', 0x6f60a0);
-        const help2 = label('X DASH, UP READ', 0x6f60a0);
-        help1.anchor.set(0.5, 0);
-        help2.anchor.set(0.5, 0);
-        help1.position.set(150, 76);
-        help2.position.set(150, 88);
+        const help = touch
+            ? ['BUTTONS MOVE, JUMP x2', 'AND DASH, UP READ']
+            : ['ARROWS MOVE, Z JUMP x2', 'X DASH, UP READ'];
+        help.forEach((line, i) => {
+            const t = label(line, 0x6f60a0);
+            t.anchor.set(0.5, 0);
+            t.position.set(150, 76 + i * 12);
+            words.addChild(t);
+        });
 
         const neon = fancy('dance', PARTY[0]);
         neon.anchor.set(0.5, 0);
         neon.position.set(BOOTH.x + 16, 92);
-        words.addChild(sub, help1, help2, neon);
-        return { letters, neon };
+        const gallery = fancy('projects', PARTY[2]);
+        gallery.anchor.set(0.5, 0);
+        gallery.position.set((GX + GW / 2) * T, 30);
+        words.addChild(sub, neon, gallery);
+        return { letters, neon, gallery };
     }
 
     function buildSigns() {
-        for (const s of SIGNS) {
-            const col = party(s.page * 2);
-            const text = label(pages[s.page].title.toUpperCase(), col);
-            const bw = text.width + 8, bh = 14;
-            const bx = Math.round(s.x - bw / 2), by = s.y - 10 - bh;
-            const board = new Graphics()
-                .rect(s.x, s.y - 10, 1, 10).fill(0x3d3066)
-                .rect(bx, by, bw, bh).fill(0x0d0818)
-                .rect(bx, by, bw, bh).stroke({ width: 1, color: col, alignment: 1 });
-            text.position.set(bx + 4, by + 3);
-            signs.addChild(board, text);
-            s.top = by;
-            s.c = col;
+        for (const r of readables) {
+            if (r.kind === 'page') {
+                const text = label(pages[r.key].title.toUpperCase(), r.c);
+                const bw = text.width + 8, bh = 14;
+                const bx = Math.round(r.x - bw / 2), by = r.y - 10 - bh;
+                const board = new Graphics()
+                    .rect(r.x, r.y - 10, 1, 10).fill(0x3d3066)
+                    .rect(bx, by, bw, bh).fill(0x0d0818)
+                    .rect(bx, by, bw, bh).stroke({ width: 1, color: r.c, alignment: 1 });
+                text.position.set(bx + 4, by + 3);
+                signs.addChild(board, text);
+                r.top = by;
+            } else {
+                // poster title, shown when you walk up to it
+                const name = label(projects[r.i].title.toUpperCase(), 0xffffff, {
+                    dropShadow: { color: 0x05030a, distance: 1, angle: Math.PI / 2, blur: 0, alpha: 1 },
+                });
+                name.anchor.set(0.5, 0);
+                name.position.set(r.x, r.top + 24);
+                name.visible = false;
+                signs.addChild(name);
+                r.name = name;
+            }
         }
     }
 
     drawBackdrop();
     drawTiles();
     buildSigns();
-    const { letters, neon } = buildWords();
+    const { letters, neon, gallery } = buildWords();
 
     // HUD
-    const NOTES = [[25, 12], [50, 9], [48, 13], [78, 12], [85, 6]].map(([x, y]) => ({ x: x * T + 4, y: y * T + 4, got: false }));
     const hudNote = new Graphics();
     drawSprite(plot(hudNote), NOTE, 8, 7, { x: PARTY[2] });
     const noteCount = label(`0/${NOTES.length}`);
@@ -333,25 +389,58 @@ export async function startGame({ pages, mount }) {
     toast.alpha = 0;
     hud.addChild(hudNote, noteCount, toast);
 
-    // Input
+    // Input: keyboard, gamepad and on-screen buttons all feed the same key set
 
     let active = true;
     const keys = new Set();
     const pressed = new Set();
     const GAME_KEYS = ['arrowleft', 'arrowright', 'arrowup', 'arrowdown', ' '];
+    const CLOSE_KEYS = ['escape', 'x', 'z', 'c', 'backspace'];
+    const JUMP_KEYS = [' ', 'z', 'c', 'k'];
+    const DASH_KEYS = ['x', 'shift', 'j'];
+
+    function input(k, down) {
+        if (down) {
+            if (!keys.has(k)) pressed.add(k);
+            keys.add(k);
+        } else {
+            keys.delete(k);
+        }
+    }
+
     addEventListener('keydown', (e) => {
         if (!active) return;
         const k = e.key.toLowerCase();
-        if (!keys.has(k)) pressed.add(k);
-        keys.add(k);
-        if (GAME_KEYS.includes(k)) e.preventDefault();
+        // while reading, leave arrows, space, tab and enter to the dialog so it scrolls and links work
+        if (dialogOpen && !CLOSE_KEYS.includes(k)) return;
+        input(k, true);
+        if (GAME_KEYS.includes(k) || dialogOpen) e.preventDefault();
     });
-    addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()));
+    addEventListener('keyup', (e) => input(e.key.toLowerCase(), false));
     addEventListener('blur', () => keys.clear());
+
+    let padKeys = new Set();
+    function pollGamepad() {
+        const gp = [...(navigator.getGamepads?.() || [])].find(Boolean);
+        const want = new Set();
+        if (gp) {
+            const b = (i) => gp.buttons[i]?.pressed;
+            const ax = gp.axes[0] || 0, ay = gp.axes[1] || 0;
+            if (ax < -0.4 || b(14)) want.add('arrowleft');
+            if (ax > 0.4 || b(15)) want.add('arrowright');
+            if (ay < -0.5 || b(12)) want.add('arrowup');
+            if (ay > 0.5 || b(13)) want.add('arrowdown');
+            if (b(0)) want.add('z'); // A: jump
+            if (b(1) || b(2)) want.add('x'); // B or X: dash, also closes
+            if (b(3)) want.add('e'); // Y: read
+        }
+        for (const k of want) if (!padKeys.has(k)) input(k, true);
+        for (const k of padKeys) if (!want.has(k)) input(k, false);
+        padKeys = want;
+    }
+
     const held = (...ks) => ks.some((k) => keys.has(k));
     const hit = (...ks) => ks.some((k) => pressed.has(k));
-    const JUMP_KEYS = [' ', 'z', 'c', 'k'];
-    const DASH_KEYS = ['x', 'shift', 'j'];
 
     // State
 
@@ -361,11 +450,12 @@ export async function startGame({ pages, mount }) {
         face: 1, grounded: true, coyote: 0, jumpBuf: 0, dashBuf: 0,
         varJumpT: 0, varJumpSpeed: 0, forceT: 0, forceDir: 0,
         canDash: true, dashT: 0, dashDir: { x: 1, y: 0 }, freeze: 0, airJumps: 1, flash: 0,
-        sx: 1, sy: 1, runT: 0,
+        sx: 1, sy: 1, runT: 0, landT: 0, still: 0, afro: 0, wallSlide: false, rows: null,
     };
     const scarf = Array.from({ length: 6 }, () => ({ x: P.x, y: P.y }));
     const ghosts = [];
     const particles = [];
+    const steps = []; // glowing footprints on the dance floor
     const r = rng(99);
     const motes = Array.from({ length: 50 }, () => ({ x: r() * LEVEL_W, y: r() * LEVEL_H, s: r() * 10, c: party(r() * 6) }));
     const spots = Array.from({ length: 18 }, () => ({ a: r() * Math.PI * 2, y: r(), c: party(r() * 6) }));
@@ -373,11 +463,10 @@ export async function startGame({ pages, mount }) {
     let frame = 0;
     let landed = false;
     let shake = 0;
-    let nearSign = null;
+    let near = null;
     let dialogOpen = false;
-    let dialogT = 0;
-    let dialogPage = 0;
     let notesGot = 0;
+    let partyMode = false;
     let toastT = 0;
 
     function solidAt(x, y, w, h) {
@@ -486,6 +575,16 @@ export async function startGame({ pages, mount }) {
         }
     }
 
+    function confetti(n) {
+        for (let i = 0; i < n; i++) {
+            particles.push({
+                x: cam.x + Math.random() * W, y: cam.y - 2,
+                vx: (Math.random() - 0.5) * 0.6, vy: 0.4 + Math.random() * 0.6,
+                life: 240, c: party(Math.random() * 6), add: false, confetti: true,
+            });
+        }
+    }
+
     function jump(speed, ix) {
         P.vy = speed;
         P.varJumpSpeed = speed;
@@ -501,43 +600,53 @@ export async function startGame({ pages, mount }) {
         toastT = 150;
     }
 
-    function openDialog(page) {
-        dialog.removeChildren().forEach((c) => c.destroy());
-        dialogPage = page;
-        const p = pages[page];
-        const dim = new Graphics().rect(0, 0, W, H).fill({ color: 0x05030a, alpha: 0.92 });
-        const heading = fancy(p.title, 0xffffff);
-        heading.anchor.set(0.5, 0);
-        heading.position.set(W / 2, 14);
-        // thin ornament under the heading
-        const col = party(page * 2);
-        const orn = new Graphics()
-            .rect(W / 2 - 60, 44, 54, 1).fill(0x8a7bb5)
-            .rect(W / 2 + 7, 44, 54, 1).fill(0x8a7bb5)
-            .poly([W / 2, 41, W / 2 + 3, 44.5, W / 2, 48, W / 2 - 3, 44.5]).fill(col);
-        const body = label(p.body, 0xe8e2ff, { wordWrap: true, wordWrapWidth: Math.min(W - 32, 300), lineHeight: 12, align: 'center' });
-        body.anchor.set(0.5, 0);
-        body.position.set(W / 2, 58);
-        const hint = label('Z / ESC  CLOSE', 0x6f60a0);
-        hint.anchor.set(0.5, 1);
-        hint.position.set(W / 2, H - 8);
-        const oy = Math.max(0, Math.round((H - 180) / 2));
-        for (const c of [heading, orn, body]) c.y += oy;
-        dialog.addChild(dim, heading, orn, body, hint);
+    // Reading happens in an HTML dialog over the game, so text can scroll and links can be clicked
+
+    const dialogTitle = dialogEl.querySelector('.dialog-title');
+    const dialogBody = dialogEl.querySelector('.dialog-body');
+    let hideTimer = 0;
+
+    function openDialog(item) {
+        const src = item.kind === 'page' ? pages[item.key] : projects[item.i];
+        dialogEl.style.setProperty('--c', css(item.c));
+        dialogTitle.textContent = src.title;
+        dialogBody.replaceChildren(...[...src.el.children]
+            .filter((el) => !/^H[1-6]$/.test(el.tagName))
+            .map((el) => el.cloneNode(true)));
+        dialogBody.scrollTop = 0;
+        clearTimeout(hideTimer);
+        dialogEl.hidden = false;
+        requestAnimationFrame(() => dialogEl.classList.add('open'));
+        dialogBody.focus({ preventScroll: true });
         dialogOpen = true;
     }
+
+    function closeDialog() {
+        dialogOpen = false;
+        dialogEl.classList.remove('open');
+        hideTimer = setTimeout(() => { dialogEl.hidden = true; }, 200);
+        if (dialogEl.contains(document.activeElement)) document.activeElement.blur();
+    }
+
+    dialogEl.addEventListener('click', (e) => {
+        if (e.target === dialogEl || e.target.closest('.dialog-close')) closeDialog();
+    });
 
     function step() {
         frame++;
         landed = false;
 
+        let justClosed = false;
         if (dialogOpen) {
-            if (hit('escape', 'z', 'x', 'c', ' ', 'enter', 'arrowup', 'w', 'e')) dialogOpen = false;
-        } else if (nearSign && P.grounded && hit('arrowup', 'w', 'e')) {
-            openDialog(nearSign.page);
+            if (hit(...CLOSE_KEYS)) {
+                closeDialog();
+                justClosed = true;
+            }
+        } else if (near && P.grounded && hit('arrowup', 'w', 'e')) {
+            openDialog(near);
         }
 
-        const free = !dialogOpen;
+        const free = !dialogOpen && !justClosed;
         let ix = free ? (held('arrowright', 'd') ? 1 : 0) - (held('arrowleft', 'a') ? 1 : 0) : 0;
         const iy = free ? (held('arrowdown', 's') ? 1 : 0) - (held('arrowup', 'w') ? 1 : 0) : 0;
         const jumpHeld = free && held(...JUMP_KEYS);
@@ -565,6 +674,7 @@ export async function startGame({ pages, mount }) {
             P.forceT--;
             ix = P.forceDir;
         }
+        P.wallSlide = false;
 
         if (P.dashBuf > 0 && P.canDash) {
             let dx = ix, dy = iy;
@@ -586,7 +696,7 @@ export async function startGame({ pages, mount }) {
 
         if (P.dashT > 0) {
             P.dashT--;
-            if (frame % 2 === 0) ghosts.push({ x: P.x, y: P.y, face: P.face, life: 1, c: party(frame / 2) });
+            if (frame % 2 === 0 && P.rows) ghosts.push({ x: P.x, y: P.y, face: P.face, rows: P.rows, life: 1, c: party(frame / 2) });
             if (P.jumpBuf > 0 && P.coyote > 0 && P.dashDir.x !== 0 && P.dashDir.y >= 0) {
                 // super (sideways) or hyper (down-diagonal) jump out of a dash along the ground
                 const hyper = P.dashDir.y > 0;
@@ -611,6 +721,7 @@ export async function startGame({ pages, mount }) {
                 let maxFall = iy > 0 ? FAST_FALL : MAX_FALL;
                 if (ix && P.vy >= 0 && solidAt(P.x + ix, P.y, P.w, P.h)) {
                     maxFall = Math.min(maxFall, WALL_SLIDE_MAX);
+                    P.wallSlide = true;
                     if (frame % 8 === 0) dust(P.x + (ix > 0 ? P.w : 0), P.y + 6, 1);
                 }
                 const g = Math.abs(P.vy) < HALF_GRAV && jumpHeld ? GRAVITY / 2 : GRAVITY;
@@ -657,11 +768,21 @@ export async function startGame({ pages, mount }) {
         if (landed) {
             squash(1.4, 0.65);
             dust(P.x + 3, P.y + P.h, 5);
+            P.landT = 6;
         }
+        if (P.landT > 0) P.landT--;
         if (P.flash > 0) P.flash--;
         P.sx = approach(P.sx, 1, 0.06);
         P.sy = approach(P.sy, 1, 0.06);
         P.runT = P.grounded && Math.abs(P.vx) > 0.3 ? P.runT + 1 : 0;
+        P.still = P.grounded && ix === 0 && Math.abs(P.vx) < 0.1 && P.dashT === 0 && !dialogOpen ? P.still + 1 : 0;
+        // the afro trails behind when moving and catches up when stopping
+        P.afro += (Math.max(-1, Math.min(1, -P.vx * P.face * 0.8)) - P.afro) * 0.2;
+
+        // light up the dance floor where you step
+        if (P.grounded && inHall(P.x + 3) && (P.runT % 6 === 1 || landed)) {
+            steps.push({ x: P.x + 3, life: 1, c: party(frame / 6) });
+        }
 
         // scarf trails behind like hair
         scarf[0].x = P.x + 3 - P.face * 2;
@@ -674,7 +795,7 @@ export async function startGame({ pages, mount }) {
             scarf[i].y += (ty - scarf[i].y) * 0.55;
         }
 
-        nearSign = SIGNS.find((s) => Math.abs(P.x + 3 - s.x) < 14 && Math.abs(P.y + P.h - s.y) < 6) || null;
+        near = readables.find((s) => Math.abs(P.x + 3 - s.x) < 14 && Math.abs(P.y + P.h - s.y) < 6) || null;
 
         for (const n of NOTES) {
             if (n.got || Math.hypot(P.x + 3 - n.x, P.y + 6 - n.y) > 8) continue;
@@ -682,7 +803,13 @@ export async function startGame({ pages, mount }) {
             notesGot++;
             noteCount.text = `${notesGot}/${NOTES.length}`;
             burst(n.x, n.y, 12);
-            showToast(notesGot === NOTES.length ? 'ALL NOTES FOUND!' : `NOTE ${notesGot}/${NOTES.length}`);
+            if (notesGot === NOTES.length) {
+                partyMode = true;
+                confetti(60);
+                showToast('PARTY MODE!');
+            } else {
+                showToast(`NOTE ${notesGot}/${NOTES.length}`);
+            }
         }
 
         effects();
@@ -690,17 +817,22 @@ export async function startGame({ pages, mount }) {
 
     // particles, camera and timers keep running during hit-stop
     function effects() {
+        if (partyMode && frame % 3 === 0) confetti(1);
         for (let i = particles.length - 1; i >= 0; i--) {
             const p = particles[i];
-            p.x += p.vx;
+            p.x += p.vx + (p.confetti ? Math.sin((frame + i) * 0.05) * 0.2 : 0);
             p.y += p.vy;
-            p.vy += p.add ? 0.01 : 0.03;
-            p.vx *= 0.96;
-            if (--p.life <= 0) particles.splice(i, 1);
+            p.vy += p.confetti ? 0 : p.add ? 0.01 : 0.03;
+            if (!p.confetti) p.vx *= 0.96;
+            if (--p.life <= 0 || p.y > LEVEL_H) particles.splice(i, 1);
         }
         for (let i = ghosts.length - 1; i >= 0; i--) {
             ghosts[i].life -= 0.08;
             if (ghosts[i].life <= 0) ghosts.splice(i, 1);
+        }
+        for (let i = steps.length - 1; i >= 0; i--) {
+            steps[i].life -= 0.015;
+            if (steps[i].life <= 0) steps.splice(i, 1);
         }
         for (const m of motes) {
             m.y -= 0.12;
@@ -716,10 +848,50 @@ export async function startGame({ pages, mount }) {
 
         if (shake > 0) shake--;
         if (toastT > 0) toastT--;
-        dialogT = approach(dialogT, dialogOpen ? 1 : 0, 0.1);
     }
 
     // Rendering
+
+    function playerRows(beat, dancing) {
+        const bi = Math.floor(beat);
+        const runFrame = Math.floor(P.runT / 7) % 2;
+        let body = BODY.idle, legs = LEGS.stand, bob = 0;
+        if (dancing) {
+            body = bi % 2 ? BODY.up : BODY.fall;
+            legs = beat - bi < 0.25 ? LEGS.jump : LEGS.stand;
+        } else if (P.dashT > 0) {
+            body = BODY.dash;
+            legs = LEGS.jump;
+        } else if (!P.grounded) {
+            if (P.wallSlide) {
+                body = BODY.wall;
+                legs = LEGS.wall;
+            } else if (P.vy < -0.3) {
+                body = BODY.up;
+                legs = LEGS.jump;
+            } else {
+                body = BODY.fall;
+                legs = LEGS.fall;
+            }
+        } else if (P.runT) {
+            body = runFrame ? BODY.swing : BODY.idle;
+            legs = runFrame ? LEGS.runB : LEGS.runA;
+            bob = runFrame;
+        }
+        // afro lifts when falling fast and squashes down after landing
+        const afroY = !P.grounded && P.vy > 1.6 ? -1 : P.landT > 0 ? 1 : 0;
+        const afroX = 1 + Math.round(P.afro);
+        const parts = [
+            { rows: body, x: 1, y: 8 },
+            { rows: legs, x: 1, y: 11 },
+            { rows: FACE, x: 1, y: 5 + bob },
+            { rows: AFRO, x: afroX, y: 1 + bob + Math.max(0, afroY) },
+        ];
+        // when lifting, the afro stretches up rather than detaching from the head
+        if (afroY < 0) parts.push({ rows: AFRO, x: afroX, y: 1 + bob + afroY });
+        if (partyMode) parts.push({ rows: SHADES, x: 1, y: 5 + bob });
+        return compose(parts, 11, 13);
+    }
 
     function render(time) {
         const beat = (time * BPM) / 60;
@@ -735,8 +907,9 @@ export async function startGame({ pages, mount }) {
 
         // disco ball light: spots on the back wall and two slow beams
         glowBack.clear();
+        const spin = partyMode ? 0.6 : 0.2;
         for (const s of spots) {
-            const a = s.a + time * 0.2;
+            const a = s.a + time * spin;
             const front = Math.cos(a);
             if (front <= 0) continue;
             const x = Math.round(BALL.x + Math.sin(a) * 140);
@@ -747,6 +920,12 @@ export async function startGame({ pages, mount }) {
             const ex = BALL.x + Math.sin(beat * Math.PI / 16 + n * 2.5) * 90;
             glowBack.poly([BALL.x, BALL.y, ex - 14, 160, ex + 14, 160]).fill({ color: party(n * 4), alpha: 0.05 });
         }
+        // a soft spotlight on every poster
+        for (const r of readables) {
+            if (r.kind !== 'project') continue;
+            const lit = near === r ? 0.09 : 0.04;
+            glowBack.poly([r.x - 3, 2 * T, r.x + 3, 2 * T, r.x + 22, 160, r.x - 22, 160]).fill({ color: r.c, alpha: lit });
+        }
 
         // title bob and neon flicker
         letters.forEach((t, i) => {
@@ -754,6 +933,7 @@ export async function startGame({ pages, mount }) {
         });
         neon.alpha = 0.8 + 0.2 * Math.sin(time * 3);
         neon.tint = party(Math.floor(beat / 8) * 2);
+        gallery.alpha = 0.85 + 0.15 * Math.sin(time * 2.3 + 1);
 
         decor.clear();
         glowFront.clear();
@@ -775,10 +955,20 @@ export async function startGame({ pages, mount }) {
         for (let j = 0, y = -br; y < br; j++, y += 3) {
             for (let i = 0, x = -br; x < br; i++, x += 3) {
                 if ((x + 1) ** 2 + (y + 1) ** 2 > (br - 1) ** 2) continue;
-                decor.rect(BALL.x + x, BALL.y + y, 2, 2).fill([0xffffff, 0xc2c3c7, 0x5f574f, 0xc2c3c7][(Math.floor(time * 1.5) + i + j * 2) % 4]);
+                decor.rect(BALL.x + x, BALL.y + y, 2, 2).fill([0xffffff, 0xc2c3c7, 0x5f574f, 0xc2c3c7][(Math.floor(time * (partyMode ? 5 : 1.5)) + i + j * 2) % 4]);
             }
         }
         glowFront.circle(BALL.x, BALL.y, 26).fill({ color: 0xb9a0ff, alpha: 0.05 });
+
+        // dance floor: tiles pulse with the beat, footprints glow and fade
+        for (let tx = 40; tx < 72; tx++) {
+            if ((tx + bi) % 2) continue;
+            glowFront.rect(tx * T, 160, T, 1).fill({ color: party(tx / 2 + bi), alpha: 0.25 * pulse });
+        }
+        for (const s of steps) {
+            glowFront.rect(Math.round(s.x) - 4, 159, 8, 2).fill({ color: s.c, alpha: s.life * 0.7 });
+            glowFront.circle(s.x, 158, 6).fill({ color: s.c, alpha: s.life * 0.08 });
+        }
 
         // speakers pump on the beat
         for (const x of SPEAKERS) {
@@ -787,16 +977,19 @@ export async function startGame({ pages, mount }) {
             decor.circle(x + 6, 155, 3 + pulse).fill(0x3d3066);
         }
 
-        // dancers turn and hop on the beat
-        const hop = bf < 0.25 ? 1 : 0;
+        // dancers turn and hop on the beat, face you and hop higher when you come close
+        const px = P.x + 3;
         DANCERS.forEach((d, i) => {
-            const turn = (bi + i) % 2 === 0;
+            const close = Math.abs(d.x - px) < 48;
+            const hop = partyMode ? (bf < 0.4 ? 2 : 0) : bf < 0.25 ? (close ? 2 : 1) : 0;
+            const flip = close ? px < d.x : (bi + i) % 2 === 0;
             const rows = [...HEADS[d.head], ...BOY_BODY[(bi + i) % 2], ...BOY_LEGS[hop ? 3 : 0]];
-            drawSprite(plot(decor), rows, d.x - 4, 160 - 12 - hop, d.colors, { flip: turn, outline: OUTLINE });
+            drawSprite(plot(decor), rows, d.x - 4, 160 - 12 - hop, d.colors, { flip, outline: OUTLINE });
         });
 
         // DJ with headphones behind the booth
-        const djX = BOOTH.x + 12, djY = 136 - hop;
+        const djHop = bf < 0.25 ? 1 : 0;
+        const djX = BOOTH.x + 12, djY = 136 - djHop;
         drawSprite(plot(decor), [...HEADS.short, ...BOY_BODY[0]], djX, djY, DJ_COLORS, { outline: OUTLINE });
         decor.rect(djX + 1, djY + 1, 1, 4).fill(PARTY[0]);
         decor.rect(djX + 2, djY, 6, 1).fill(PARTY[0]);
@@ -806,12 +999,15 @@ export async function startGame({ pages, mount }) {
         decor.rect(BOOTH.x + 3, BOOTH.y - 2, 8, 2).fill(0x5f574f);
         decor.rect(BOOTH.x + 21, BOOTH.y - 2, 8, 2).fill(0x5f574f);
 
-        // sign glows and read prompt
-        for (const s of SIGNS) glowFront.circle(s.x, s.top + 7, 18).fill({ color: s.c, alpha: 0.05 });
+        // sign glows, poster titles and the read prompt
         prompt.clear();
-        if (nearSign && !dialogOpen) {
-            const y = nearSign.top - 7 + Math.round(Math.sin(time * 5));
-            prompt.poly([nearSign.x - 3, y + 3, nearSign.x, y, nearSign.x + 3, y + 3]).fill(0xffffff);
+        for (const s of readables) {
+            if (s.kind === 'page') glowFront.circle(s.x, s.top + 7, 18).fill({ color: s.c, alpha: 0.05 });
+            else s.name.visible = near === s && !dialogOpen;
+        }
+        if (near && !dialogOpen) {
+            const y = near.top - 7 + Math.round(Math.sin(time * 5));
+            prompt.poly([near.x - 3, y + 3, near.x, y, near.x + 3, y + 3]).fill(0xffffff);
         }
 
         // music notes
@@ -826,7 +1022,7 @@ export async function startGame({ pages, mount }) {
         // dash afterimages and scarf
         actors.clear();
         for (const g of ghosts) {
-            drawSprite(plot(actors), [...BOY_HEAD, ...BOY_BODY[0], ...BOY_LEGS[0]], g.x - 1, g.y, tinted(BOY_COLORS, g.c), { alpha: g.life * 0.5, flip: g.face < 0 });
+            drawSprite(plot(actors), g.rows, g.x - 2, g.y - 1, tinted(BOY_COLORS, g.c), { alpha: g.life * 0.5, flip: g.face < 0 });
         }
         const scarfColor = P.dashT > 0 ? party(frame / 2) : P.canDash ? PARTY[0] : PARTY[4];
         scarf.forEach((s, i) => {
@@ -834,28 +1030,31 @@ export async function startGame({ pages, mount }) {
             actors.rect(Math.round(s.x) - 1, Math.round(s.y) - 1, size, size).fill(scarfColor);
         });
 
-        // player
-        playerG.clear();
-        const runFrame = Math.floor(P.runT / 7) % 2;
-        const legs = !P.grounded ? BOY_LEGS[3] : P.runT ? BOY_LEGS[1 + runFrame] : BOY_LEGS[0];
-        const body = P.runT ? BOY_BODY[runFrame] : BOY_BODY[0];
+        // player, dancing when left standing on the dance floor
+        const dancing = P.still > DANCE_AFTER && inHall(px);
+        const rows = playerRows(beat, dancing);
+        P.rows = rows;
         const colors = P.flash > 0 ? tinted(BOY_COLORS, 0xffffff) : BOY_COLORS;
-        drawSprite(plot(playerG), [...BOY_HEAD, ...body, ...legs], -4, -12, colors, { flip: P.face < 0, outline: OUTLINE });
+        const flip = dancing ? Math.floor(bi / 2) % 2 === 1 : P.face < 0;
+        const hop = dancing && bf < 0.25 ? 1 : 0;
+        playerG.clear();
+        drawSprite(plot(playerG), rows, -5, -13 - hop, colors, { flip, outline: OUTLINE });
         playerView.position.set(Math.round(P.x + P.w / 2), Math.round(P.y + P.h));
         playerView.scale.set(P.sx, P.sy);
-        glowFront.circle(P.x + 3, P.y + 6, 20).fill({ color: 0xd8cfff, alpha: 0.04 });
+        glowFront.circle(px, P.y + 6, 20).fill({ color: 0xd8cfff, alpha: 0.04 });
 
         fx.clear();
         for (const p of particles) {
-            (p.add ? glowFront : fx).rect(Math.round(p.x), Math.round(p.y), 1, 1).fill({ color: p.c, alpha: Math.min(1, p.life / 15) });
+            const target = p.add ? glowFront : fx;
+            const alpha = p.confetti ? 1 : Math.min(1, p.life / 15);
+            const wide = p.confetti && Math.floor((frame + p.x) / 8) % 2 === 0;
+            target.rect(Math.round(p.x), Math.round(p.y), wide ? 2 : 1, 1).fill({ color: p.c, alpha });
         }
         for (const m of motes) {
             glowFront.rect(Math.round(m.x), Math.round(m.y), 1, 1).fill({ color: m.c, alpha: 0.4 + 0.3 * Math.sin(time * 2 + m.s) });
         }
 
         toast.alpha = Math.min(1, toastT / 30);
-        dialog.visible = dialogT > 0.01;
-        dialog.alpha = dialogT;
     }
 
     // The view grows with the window: about 180 game pixels tall, scaled by whole pixels
@@ -871,7 +1070,6 @@ export async function startGame({ pages, mount }) {
         drawFar();
         drawMid();
         toast.x = W / 2;
-        if (dialogOpen) openDialog(dialogPage);
     }
     addEventListener('resize', () => active && fit());
 
@@ -882,6 +1080,7 @@ export async function startGame({ pages, mount }) {
     const start = performance.now();
     let acc = 0;
     app.ticker.add((ticker) => {
+        pollGamepad();
         acc += Math.min(ticker.deltaMS, 100) / 1000;
         while (acc >= 1 / 60) {
             step();
@@ -896,6 +1095,7 @@ export async function startGame({ pages, mount }) {
             active = false;
             keys.clear();
             pressed.clear();
+            if (dialogOpen) closeDialog();
             app.ticker.stop();
         },
         resume() {
@@ -903,7 +1103,8 @@ export async function startGame({ pages, mount }) {
             fit();
             app.ticker.start();
         },
+        input,
         // for tests and debugging
-        _debug: { P, step, keys, pressed },
+        _debug: { P, step, keys, pressed, readables, openDialog },
     };
 }

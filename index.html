@@ -31,6 +31,29 @@
         <p class="loading">Loading the party...</p>
         <div id="screen"></div>
         <button id="to-info" class="pixel-btn small" type="button">Text version</button>
+
+        <div id="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title" hidden>
+            <div class="dialog-box">
+                <button class="dialog-close" type="button" aria-label="Close">&times;</button>
+                <h2 id="dialog-title" class="dialog-title"></h2>
+                <div class="ornament" aria-hidden="true"></div>
+                <div class="dialog-body" tabindex="-1"></div>
+                <p class="dialog-hint">Esc / X to close</p>
+            </div>
+        </div>
+
+        <div class="touch" aria-hidden="true">
+            <div class="pad">
+                <button type="button" class="up" data-key="arrowup">&#9650;</button>
+                <button type="button" class="left" data-key="arrowleft">&#9664;</button>
+                <button type="button" class="right" data-key="arrowright">&#9654;</button>
+                <button type="button" class="down" data-key="arrowdown">&#9660;</button>
+            </div>
+            <div class="actions">
+                <button type="button" data-key="x">DASH</button>
+                <button type="button" data-key="z">JUMP</button>
+            </div>
+        </div>
     </div>
 
     <main id="info">
@@ -45,6 +68,7 @@
                 <a href="#contact">Contact</a>
             </nav>
             <button id="play" class="pixel-btn" type="button" hidden>&#9654; Play the game</button>
+            <p id="rotate" class="rotate" hidden>Turn your phone sideways to play the game.</p>
         </header>
 
         <div class="cards">
@@ -57,25 +81,35 @@
 
             <section id="projects" class="card" data-page>
                 <h2>Projects</h2>
-                <ul>
-                    <li>Project one</li>
-                    <li>Project two</li>
-                    <li>Project three</li>
-                </ul>
-                <p>(Placeholders)</p>
+                <!-- each article becomes a poster in the game's gallery -->
+                <article class="project" data-project>
+                    <h3>Project one</h3>
+                    <p>A short description of the project. (Placeholder)</p>
+                </article>
+                <article class="project" data-project>
+                    <h3>Project two</h3>
+                    <p>A short description of the project. (Placeholder)</p>
+                </article>
+                <article class="project" data-project>
+                    <h3>Project three</h3>
+                    <p>A short description of the project. (Placeholder)</p>
+                </article>
             </section>
 
             <section id="contact" class="card" data-page>
                 <h2>Contact</h2>
                 <ul>
                     <li>Email: <a href="mailto:you@mail.com">you@mail.com</a></li>
-                    <li>GitHub: <a href="https://github.com/alaidine">alaidine</a></li>
+                    <li>GitHub: <a href="https://github.com/alaidine" target="_blank" rel="noopener">alaidine</a></li>
                 </ul>
                 <p>(Placeholders)</p>
             </section>
         </div>
 
-        <footer>&copy; 2026 Aalaaïddine Ali Mlinde</footer>
+        <footer>
+            <p>&copy; 2026 Aalaaïddine Ali Mlinde</p>
+            <p>Other versions: <a href="arcade/">arcade</a></p>
+        </footer>
     </main>
 
     <script type="module" src="main.js"></script>

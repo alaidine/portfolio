@@ -1,28 +1,37 @@
 import { BOY_HEAD, BOY_BODY, BOY_LEGS, BOY_COLORS, OUTLINE, drawSprite } from './sprites.js';
 
-// The game needs a keyboard, a mouse-like pointer and some room. Everyone else gets the page.
-const canPlay = () => matchMedia('(hover: hover) and (pointer: fine)').matches && innerWidth >= 640 && innerHeight >= 400;
+// Keyboard players need a mouse-like pointer and some room. Touch players need a landscape screen.
+const coarse = () => matchMedia('(pointer: coarse)').matches;
+const canPlayKeys = () => matchMedia('(hover: hover) and (pointer: fine)').matches && innerWidth >= 640 && innerHeight >= 400;
+const canPlayTouch = () => coarse() && innerWidth > innerHeight && innerWidth >= 560 && innerHeight >= 280;
+const canPlay = () => canPlayKeys() || canPlayTouch();
 
 const playButton = document.getElementById('play');
+const rotateHint = document.getElementById('rotate');
 const infoButton = document.getElementById('to-info');
 let game = null;
 let starting = false;
 
-// Turns each [data-page] section into plain text for the in-game dialogs
+// The game reads its text straight from the page sections
 function readPages() {
-    return [...document.querySelectorAll('[data-page]')].map((section) => ({
-        title: section.querySelector('h2').textContent.trim(),
-        body: [...section.children]
-            .filter((el) => el.tagName !== 'H2')
-            .map((el) => (el.tagName === 'UL'
-                ? [...el.children].map((li) => `- ${li.textContent.trim()}`).join('\n')
-                : el.textContent.trim()))
-            .join('\n\n'),
-    }));
+    const section = (id) => {
+        const el = document.getElementById(id);
+        return { title: el.querySelector('h2').textContent.trim(), el };
+    };
+    return {
+        about: section('about'),
+        contact: section('contact'),
+        projects: [...document.querySelectorAll('[data-project]')].map((el) => ({
+            title: el.querySelector('h3').textContent.trim(),
+            el,
+        })),
+    };
 }
 
 async function showGame() {
+    const touch = !canPlayKeys() && canPlayTouch();
     document.body.classList.add('playing');
+    document.body.classList.toggle('touch-play', touch);
     if (game) {
         game.resume();
         return;
@@ -31,7 +40,12 @@ async function showGame() {
     starting = true;
     try {
         const { startGame } = await import('./game.js');
-        game = await startGame({ pages: readPages(), mount: document.getElementById('screen') });
+        game = await startGame({
+            pages: readPages(),
+            mount: document.getElementById('screen'),
+            dialogEl: document.getElementById('dialog'),
+            touch,
+        });
         window.__game = game;
     } catch (err) {
         console.error(err);
@@ -42,7 +56,7 @@ async function showGame() {
 }
 
 function showInfo() {
-    document.body.classList.remove('playing');
+    document.body.classList.remove('playing', 'touch-play');
     game?.pause();
 }
 
@@ -53,15 +67,34 @@ infoButton.addEventListener('click', () => {
     playButton.focus();
 });
 
+// On-screen buttons press and release keys in the game, several at once
+for (const button of document.querySelectorAll('.touch [data-key]')) {
+    const key = button.dataset.key;
+    const release = () => {
+        button.classList.remove('down');
+        game?.input(key, false);
+    };
+    button.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        button.setPointerCapture(e.pointerId);
+        button.classList.add('down');
+        game?.input(key, true);
+    });
+    button.addEventListener('pointerup', release);
+    button.addEventListener('pointercancel', release);
+    button.addEventListener('contextmenu', (e) => e.preventDefault());
+}
+
 function onResize() {
     playButton.hidden = !canPlay();
+    rotateHint.hidden = !(coarse() && !canPlay() && innerWidth < innerHeight);
     if (document.body.classList.contains('playing') && !canPlay()) showInfo();
 }
 addEventListener('resize', onResize);
 onResize();
 
-// Links like /#contact open straight on the page
-if (canPlay() && !location.hash) showGame();
+// Only keyboard players start in the game. Links like /#contact open straight on the page.
+if (canPlayKeys() && !location.hash) showGame();
 
 // Rainbow, bouncing letters for the name
 const name = document.querySelector('.name');

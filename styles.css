@@ -295,6 +295,237 @@ footer {
     color: var(--muted);
 }
 
+/* Reading dialog over the game */
+
+#dialog {
+    --c: var(--violet);
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(5, 3, 10, 0.85);
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+#dialog.open {
+    opacity: 1;
+}
+
+.dialog-box {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: min(640px, 100%);
+    max-height: min(560px, 100%);
+    padding: clamp(16px, 4vh, 32px) clamp(16px, 4vw, 40px);
+    background: #0d0818;
+    box-shadow: 0 0 0 2px var(--c), 8px 8px 0 2px var(--shadow);
+    text-align: center;
+    transform: translateY(8px);
+    transition: transform 0.2s;
+}
+
+#dialog.open .dialog-box {
+    transform: none;
+}
+
+.dialog-title {
+    margin: 0;
+    font-family: 'Jacquard 24', serif;
+    font-weight: 400;
+    font-size: clamp(36px, 8vh, 64px);
+    line-height: 1;
+    color: #fff;
+}
+
+/* thin line with a diamond, under the title */
+.ornament {
+    position: relative;
+    width: min(240px, 70%);
+    height: 1px;
+    margin: 12px auto 16px;
+    background: linear-gradient(90deg, transparent, #8a7bb5 20%, #8a7bb5 80%, transparent);
+}
+
+.ornament::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    background: var(--c);
+    transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.dialog-body {
+    overflow-y: auto;
+    padding: 0 4px;
+    font-size: clamp(16px, 2.6vh, 20px);
+    scrollbar-color: var(--c) transparent;
+}
+
+.dialog-body:focus {
+    outline: none;
+}
+
+.dialog-body p,
+.dialog-body ul {
+    margin: 0 0 12px;
+}
+
+.dialog-body ul {
+    display: inline-block;
+    padding-left: 1.2em;
+    text-align: left;
+}
+
+.dialog-body li::marker {
+    color: var(--c);
+}
+
+.dialog-body a {
+    color: var(--c);
+    overflow-wrap: anywhere;
+}
+
+.dialog-body a:focus-visible,
+.dialog-close:focus-visible {
+    outline: 3px solid var(--yellow);
+    outline-offset: 3px;
+}
+
+.dialog-hint {
+    margin: 12px 0 0;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: #6f60a0;
+}
+
+.dialog-close {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    padding: 4px 8px;
+    border: 0;
+    background: none;
+    color: var(--muted);
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.dialog-close:hover {
+    color: #fff;
+}
+
+body.touch-play .dialog-hint {
+    display: none;
+}
+
+/* On-screen controls for touch players */
+
+.touch {
+    display: none;
+}
+
+body.touch-play .touch {
+    position: absolute;
+    inset: auto 0 0 0;
+    z-index: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding: 0 max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    pointer-events: none;
+}
+
+.touch button {
+    width: 56px;
+    height: 56px;
+    border: 0;
+    border-radius: 12px;
+    background: rgba(27, 17, 51, 0.6);
+    box-shadow: 0 0 0 2px rgba(185, 160, 255, 0.5);
+    color: var(--ink);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 16px;
+    pointer-events: auto;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.touch button.down {
+    background: rgba(185, 160, 255, 0.45);
+}
+
+.pad {
+    display: grid;
+    grid-template-areas: '. up .' 'left . right' '. down .';
+    gap: 4px;
+}
+
+.pad .up { grid-area: up; }
+.pad .left { grid-area: left; }
+.pad .right { grid-area: right; }
+.pad .down { grid-area: down; }
+
+.actions {
+    display: flex;
+    gap: 14px;
+    align-items: flex-end;
+}
+
+.actions button {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    font-size: 10px;
+}
+
+.actions button:last-child {
+    margin-bottom: 36px;
+    box-shadow: 0 0 0 2px var(--green);
+}
+
+.actions button:first-child {
+    box-shadow: 0 0 0 2px var(--pink);
+}
+
+/* Page extras */
+
+.project + .project {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px dashed rgba(255, 236, 39, 0.3);
+}
+
+.project h3 {
+    margin: 0 0 8px;
+    font-weight: 600;
+    font-size: 20px;
+}
+
+.rotate {
+    margin: 20px 0 0;
+    font-size: 15px;
+    color: var(--muted);
+}
+
+footer p {
+    margin: 4px 0;
+}
+
+footer a {
+    color: var(--violet);
+}
+
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before {

@@ -1,1 +1,20 @@
-Simple portfolio website
+Portfolio of Aalaaïddine Ali Mlinde — a little party platformer built with PixiJS.
+Live at https://alaidine.github.io/portfolio/
+
+Desktop with a keyboard gets the game; phones, tablets and small windows get a plain page
+with the same content. Links like /#contact always open the page.
+
+Files:
+    index.html   page content (About / Projects / Contact), also used for the in-game signs
+    main.js      picks game or page, page mascot
+    game.js      the game (level, movement, rendering)
+    sprites.js   pixel art shared by both
+    arcade/      the earlier arcade-style version
+
+Run locally (ES modules need a server, opening index.html directly won't work):
+
+    npx http-server -p 8080 -c-1
+
+then open http://localhost:8080
+
+Pushing to main deploys to GitHub Pages (.github/workflows/static.yml).

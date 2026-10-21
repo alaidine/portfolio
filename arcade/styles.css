@@ -1,0 +1,50 @@
+html,
+body {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    background: #000;
+    color: #fff;
+    font-family: 'Press Start 2P', monospace;
+}
+
+body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* --px is the size of one game pixel, set from main.js */
+#screen {
+    --px: 4px;
+    position: relative;
+    overflow: hidden;
+    border-radius: calc(var(--px) * 4);
+    box-shadow:
+        0 0 0 calc(var(--px) * 3) #16141c,
+        0 0 calc(var(--px) * 30) rgba(185, 160, 255, 0.2);
+}
+
+#screen canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+}
+
+/* CRT scanlines + vignette */
+#screen::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        repeating-linear-gradient(
+            to bottom,
+            rgba(0, 0, 0, 0.22) 0,
+            rgba(0, 0, 0, 0.22) calc(var(--px) * 0.5),
+            transparent calc(var(--px) * 0.5),
+            transparent var(--px)
+        ),
+        radial-gradient(ellipse at center, transparent 60%, rgba(0, 0, 0, 0.5) 100%);
+}

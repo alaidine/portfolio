@@ -3,10 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alaidine's portolio</title>
+    <title>Aalaaïddine Ali Mlinde — Portfolio</title>
+    <meta name="description" content="Portfolio of Aalaaïddine Ali Mlinde. About, projects and contact, served as a little party platformer.">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Aalaaïddine Ali Mlinde — Portfolio">
+    <meta property="og:description" content="About, projects and contact, served as a little party platformer.">
+    <meta property="og:url" content="https://alaidine.github.io/portfolio/">
+    <meta property="og:image" content="https://alaidine.github.io/portfolio/og.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="theme-color" content="#0b0518">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jacquard+24&family=Pixelify+Sans:wght@400;600&family=Press+Start+2P&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h1>Welcome to my portfolio!</h1>
+    <script>
+        // same check as canPlay() in main.js, early so the page doesn't flash before the game
+        if (matchMedia('(hover: hover) and (pointer: fine)').matches && innerWidth >= 640 && innerHeight >= 400 && !location.hash) {
+            document.body.classList.add('playing');
+        }
+    </script>
+    <div id="game">
+        <p class="loading">Loading the party...</p>
+        <div id="screen"></div>
+        <button id="to-info" class="pixel-btn small" type="button">Text version</button>
+    </div>
+
+    <main id="info">
+        <header class="hero">
+            <canvas id="mascot" width="11" height="15" aria-hidden="true"></canvas>
+            <h1 class="name">Aalaaïddine</h1>
+            <p class="surname">ALI MLINDE</p>
+            <p class="tagline">Welcome to the party.</p>
+            <nav class="nav" aria-label="Sections">
+                <a href="#about">About</a>
+                <a href="#projects">Projects</a>
+                <a href="#contact">Contact</a>
+            </nav>
+            <button id="play" class="pixel-btn" type="button" hidden>&#9654; Play the game</button>
+        </header>
+
+        <div class="cards">
+            <section id="about" class="card" data-page>
+                <h2>About</h2>
+                <p>Hi! I'm Aalaaïddine Ali Mlinde.</p>
+                <p>Welcome to my party portfolio, grab a drink and have a look around.</p>
+                <p>(More coming soon)</p>
+            </section>
+
+            <section id="projects" class="card" data-page>
+                <h2>Projects</h2>
+                <ul>
+                    <li>Project one</li>
+                    <li>Project two</li>
+                    <li>Project three</li>
+                </ul>
+                <p>(Placeholders)</p>
+            </section>
+
+            <section id="contact" class="card" data-page>
+                <h2>Contact</h2>
+                <ul>
+                    <li>Email: <a href="mailto:you@mail.com">you@mail.com</a></li>
+                    <li>GitHub: <a href="https://github.com/alaidine">alaidine</a></li>
+                </ul>
+                <p>(Placeholders)</p>
+            </section>
+        </div>
+
+        <footer>&copy; 2026 Aalaaïddine Ali Mlinde</footer>
+    </main>
+
+    <script type="module" src="main.js"></script>
 </body>
 </html>
